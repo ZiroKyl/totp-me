@@ -84,7 +84,8 @@ public class TOTPMIDlet extends MIDlet implements CommandListener {
 	private static final int[] HMAC_BYTE_COUNT = { 160 / 8, 256 / 8, 512 / 8 };
 
 	private static final int DEFAULT_TIMESTEP = 30;
-	private static final byte[] DEFAULT_SECRET = null;
+	//for test purpose, to compare with https://gauth.apps.gbraad.nl  http://jsfiddle.net/russau/ch8PK/
+	private static final byte[] DEFAULT_SECRET = { 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x21, (byte)0xDE, (byte)0xAD, (byte)0xBE, (byte)0xEF };
 	private static final int DEFAULT_DIGITS = 6;
 	private static final int DEFAULT_DELTA = 0;
 	private static final int DEFAULT_HMAC_ALG_IDX = 0;
@@ -124,7 +125,8 @@ public class TOTPMIDlet extends MIDlet implements CommandListener {
 	private final StringItem siKeyHex = new StringItem("HEX", null);
 	private final StringItem siKeyBase32 = new StringItem("Base32 (no zeros)", null);
 	private final StringItem siToken = new StringItem("Token", null);
-	private final StringItem siProfile = new StringItem(null, null);
+	private final StringItem siProfile = new StringItem("Profile", null);
+	private final StringItem siCurrentTimeSys = new StringItem("System Time (sec)", null);
 	private final StringItem siConfirm = new StringItem(null, null);
 	private final Gauge gauValidity = new Gauge(null, false, DEFAULT_TIMESTEP - 1, DEFAULT_TIMESTEP);
 	private final TextField tfSecret = new TextField("Secret key (Base32, no zeros)", null, 105, TextField.ANY);
@@ -164,6 +166,7 @@ public class TOTPMIDlet extends MIDlet implements CommandListener {
 		// Main display
 		fMain.append(siToken);
 		fMain.append(gauValidity);
+		fMain.append(siCurrentTimeSys);
 		fMain.append(siProfile);
 		fMain.addCommand(cmdExit);
 		fMain.addCommand(cmdProfiles);
@@ -1132,6 +1135,8 @@ public class TOTPMIDlet extends MIDlet implements CommandListener {
 				} catch (NumberFormatException e) {
 					debugErr(e.getMessage());
 				}
+
+				//http://stackoverflow.com/questions/17271039/does-system-currenttimemillis-return-utc-time/19790993#19790993
 				final long currentTimeSec = System.currentTimeMillis() / 1000L + delta;
 				final long newCounter = getCounter(currentTimeSec, timeStep);
 				if (cachedCounter != newCounter) {
@@ -1157,6 +1162,14 @@ public class TOTPMIDlet extends MIDlet implements CommandListener {
 			// set values (and repaint) only if needed
 			if (gauValidity.getValue() != remainSec) {
 				gauValidity.setValue(remainSec);
+
+				//To correct device "local" time:
+				//In Browser console: Date.now()/1000-delta
+				//and compare with System Time value:
+				siCurrentTimeSys.setText(Long.toString(System.currentTimeMillis() / 1000L));
+				//https://coderanch.com/t/557246/java/System-currentTimeMillis-UTC-Milliseconds-Official
+				//https://www.experts-exchange.com/questions/21052838/getTimeInMillis-method-in-java-util-Calendar-is-protected-how-to-use-it.html
+				//System.currentTimeMillis() == Calendar.getInstance(TimeZone.getTimeZone("UTC")).getTime().getTime(); // checked
 			}
 		}
 	}
